@@ -1,0 +1,57 @@
+#include <SPI.h>         // needed for Arduino versions later than 0018
+#include <Ethernet.h>
+
+byte mac[] = {                               // The IP address should be an available address you choose on your subnet where the switcher is also present
+  0x90, 0xA2, 0xDA, 0x0D, 0x6B, 0xB8 };      // <= SETUP!  MAC address of the Arduino
+IPAddress ip(192, 168, 10, 98);              // <= SETUP!  IP address of the Arduino
+
+// Include ATEM library and make an instance:
+// Connect to an ATEM switcher on this address and using this local port:
+// The port number is chosen randomly among high numbers.
+#include <ATEM.h>
+ATEM AtemSwitcher(IPAddress(192, 168, 10, 240), 56416);  // <= SETUP (the IP address of the ATEM switcher)
+
+// No-cost stream operator as described at 
+// http://arduiniana.org/libraries/streaming/
+template<class T>
+inline Print &operator <<(Print &obj, T arg)
+{  
+  obj.print(arg); 
+  return obj; 
+}
+
+void setup() { 
+   pinMode(4, OUTPUT); 
+   pinMode(5, OUTPUT); 
+   pinMode(6, OUTPUT); 
+   pinMode(7, OUTPUT); 
+   
+  
+  // Start the Ethernet, 
+  Ethernet.begin(mac,ip);
+  Serial.begin(9600);
+  Serial << F("\n- - - - - - - -\nSerial Started\n");  
+
+}
+
+void loop() {
+ 
+    AtemSwitcher.runLoop();
+      
+   for (uint8_t i=1;i<=4;i++)  {    
+    if (AtemSwitcher.getProgramTally(i))  {
+        digitalWrite(i + 3, HIGH);   // turn the LED on 
+    }       
+    else {
+        digitalWrite(i + 3, LOW);   
+    }   
+  }
+
+  //  try to reconnect:
+  if (AtemSwitcher.isConnectionTimedOut())  {
+    Serial << F("Connection to ATEM Switcher has timed out - reconnecting!\n");
+    AtemSwitcher.connect();
+  }  
+
+ 
+}
